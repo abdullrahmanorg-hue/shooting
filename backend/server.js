@@ -101,6 +101,32 @@ const productSchema = new mongoose.Schema(
 
 const Product = mongoose.model("Product", productSchema);
 
+const customerSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    shopName: { type: String, required: true, trim: true },
+    address: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+  },
+  { timestamps: true }
+);
+
+const Customer = mongoose.model("Customer", customerSchema);
+
+const notificationSchema = new mongoose.Schema(
+  {
+    type: { type: String, required: true, trim: true },
+    title: { type: String, required: true, trim: true },
+    message: { type: String, required: true, trim: true },
+    read: { type: Boolean, default: false },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
+  },
+  { timestamps: true }
+);
+
+const Notification = mongoose.model("Notification", notificationSchema);
+
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -325,6 +351,102 @@ app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
     return res.json({ message: "Product deleted" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Customers / Contact leads
+app.post("/api/customers", async (req, res) => {
+  try {
+    const { name, shopName, address, phone, email } = req.body || {};
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+    if (!shopName || !String(shopName).trim()) {
+      return res.status(400).json({ message: "Shop name is required" });
+    }
+    if (!address || !String(address).trim()) {
+      return res.status(400).json({ message: "Address is required" });
+    }
+    if (!phone || !String(phone).trim()) {
+      return res.status(400).json({ message: "Phone is required" });
+    }
+    if (!email || !String(email).includes("@")) {
+      return res.status(400).json({ message: "Valid email is required" });
+    }
+
+    const customer = await Customer.create({
+      name: String(name).trim(),
+      shopName: String(shopName).trim(),
+      address: String(address).trim(),
+      phone: String(phone).trim(),
+      email: String(email).toLowerCase().trim(),
+    });
+
+    await Notification.create({
+      type: "customer_created",
+      title: "New contact request",
+      message: `${customer.name} submitted a contact request (${customer.shopName}).`,
+      customerId: customer._id,
+    });
+
+    return res.status(201).json(customer);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/customers", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const customers = await Customer.find().sort({ createdAt: -1 });
+    return res.json(customers);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Admin notifications inbox
+app.get("/api/notifications", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const notifications = await Notification.find().sort({ createdAt: -1 }).limit(200);
+    return res.json(notifications);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Mark notification as read
+app.put("/api/notifications/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      { read: req.body.read },
+      { new: true }
+    );
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+    return res.json(notification);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Delete notification
+app.delete("/api/notifications/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndDelete(req.params.id);
+    if (!notification) {
+      return res.status(404).json({ message: "Notification not found" });
+    }
+    return res.json({ message: "Notification deleted" });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });

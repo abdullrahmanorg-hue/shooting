@@ -19,6 +19,7 @@ import ProductsPage from "./commponent/ProductsPage";
 import CustomersPage from "./commponent/CustomersPage";
 import RegisterForm from "./commponent/RegisterForm";
 import ProtectedRoute from "./commponent/ProtectedRoute";
+import NotificationsPage from "./pages/NotificationsPage";
 
 function AppRoutes() {
   const [user, setUser] = useState(undefined);
@@ -77,6 +78,7 @@ function AppRoutes() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<ProductsPage />} />
           <Route path="customers" element={<CustomersPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 
         <Route
