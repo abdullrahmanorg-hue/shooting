@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@plugin "daisyui";
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
+@custom-variant dark (&:where(.dark, .dark *));
+body {
+  font-family: "Inter", sans-serif;
+}
+
+.nav-link.active {
+  color: black;
+  border-bottom: 2px solid black;
+}
+.dark .nav-link.active {
+  color: white;
+  border-bottom: 2px solid green;
+}
+body {
+  @apply bg-white dark:bg-black text-gray-900 dark:text-[#fff2e1];
+}
+.logo {
+  height: 40px;
+}
+
+/* في الدارك مود */
+.dark .LOGO {
+  filter: brightness(0) invert(1);
+}
+:root {
+  --text-color: #fff2e1;
+}
