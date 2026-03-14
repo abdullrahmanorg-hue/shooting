@@ -9,10 +9,13 @@ import {
   FaTelegramPlane,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
 export default function Footer() {
   const { t, i18n } = useTranslation();
   const [darkMode, setDarkMode] = useState(false);
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("");
 
   // تغيير اللغة
   const handleTranslate = () => {
@@ -41,19 +44,47 @@ export default function Footer() {
     setDarkMode(!darkMode);
   };
 
+  const handleSubscribe = async () => {
+    if (!email || !email.includes("@")) {
+      setStatus(t("pleaseEnterValidEmail") || "Please enter a valid email.");
+      return;
+    }
+
+    try {
+      setStatus(t("submitting") || "Submitting...");
+      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+      await axios.post(`${baseUrl}/api/customers`, {
+        // required fields for your /api/customers endpoint
+        name: "Newsletter subscriber",
+        shopName: "Newsletter",
+        address: "N/A",
+        phone: "N/A",
+        email,
+      });
+
+      setEmail("");
+      setStatus(t("subscribedSuccess") || "Subscribed successfully.");
+    } catch (err) {
+      console.error("Error subscribing:", err);
+      setStatus(
+        err.response?.data?.message ||
+          t("subscribedError") ||
+          "Failed to subscribe.",
+      );
+    }
+  };
+
   return (
     <footer className="bg-gray-100 dark:bg-black text-gray-800 dark:text-[#fff2e1] transition-all duration-500">
       <div className="max-w-7xl mx-auto px-6 py-16 grid md:grid-cols-4 gap-10">
-
         {/* Brand */}
         <div className="space-y-4">
           <h2 className="text-2xl font-bold tracking-wide dark:hover:text-green-800 dark:hover:scale-95 cursor-pointer ">
             {t("brand")}
           </h2>
 
-          <p className="text-sm leading-6">
-            {t("brandDesc")}
-          </p>
+          <p className="text-sm leading-6">{t("brandDesc")}</p>
 
           {/* Dark Mode */}
           <button
@@ -65,17 +96,24 @@ export default function Footer() {
           </button>
 
           {/* Language Switch */}
-     
         </div>
 
         {/* Links */}
         <div>
           <h3 className="font-semibold mb-4">{t("quickLinks")}</h3>
           <ul className="space-y-2 text-sm flex flex-col ">
-            <Link className="dark:hover:text-green-800" to="/">{t("home")}</Link>
-            <Link className="dark:hover:text-green-800" to="/shop">{t("shop")}</Link>
-            <Link className="dark:hover:text-green-800" to="/shop">{t("newArrivals")}</Link>
-            <Link className="dark:hover:text-green-800" to="/contact">{t("contact")}</Link>
+            <Link className="dark:hover:text-green-800" to="/">
+              {t("home")}
+            </Link>
+            <Link className="dark:hover:text-green-800" to="/shop">
+              {t("shop")}
+            </Link>
+            <Link className="dark:hover:text-green-800" to="/shop">
+              {t("newArrivals")}
+            </Link>
+            <Link className="dark:hover:text-green-800" to="/contact">
+              {t("contact")}
+            </Link>
           </ul>
         </div>
 
@@ -97,25 +135,52 @@ export default function Footer() {
           <div className="flex">
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder={t("emailPlaceholder")}
               className="flex-1 px-3 py-2 rounded-l-md border dark:border-gray-700 bg-white dark:bg-[#fff2e1] dark:text-black focus:outline-none w-full"
             />
-            <button className="px-4 py-2 bg-gray-500 text-white rounded-r-md hover:bg-green-400 transition dark:bg-black">
+            <button
+              onClick={handleSubscribe}
+              className="px-4 py-2 bg-gray-500 text-white rounded-r-md hover:bg-green-400 transition dark:bg-black"
+            >
               {t("subscribe")}
             </button>
           </div>
 
+          {status && (
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              {status}
+            </p>
+          )}
+
           <div className="flex gap-4 mt-6 text-lg">
-            <a href="https://www.facebook.com/profile.php?id=100083360465874" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://www.facebook.com/profile.php?id=100083360465874"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FaFacebookF className="hover:text-blue-700 transition hover:scale-125" />
             </a>
-            <a href="https://www.instagram.com/shotingstar743/" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://www.instagram.com/shotingstar743/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FaInstagram className="hover:text-orange-500 transition hover:scale-125" />
             </a>
-            <a href="https://t.me/ShootingStarForyou" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://t.me/ShootingStarForyou"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FaTelegramPlane className="hover:text-blue-700 transition hover:scale-125" />
             </a>
-            <a href="https://www.tiktok.com/@shootingstar743_?is_from_webapp=1&sender_device=pc" target="_blank" rel="noopener noreferrer">
+            <a
+              href="https://www.tiktok.com/@shootingstar743_?is_from_webapp=1&sender_device=pc"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <FaTiktok className="hover:text-gray-900 transition hover:scale-125" />
             </a>
           </div>

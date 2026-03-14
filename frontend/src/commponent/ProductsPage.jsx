@@ -1,21 +1,25 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+const API_BASE = "http://localhost:5000";
+
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+
   const [formData, setFormData] = useState({
     id: "",
     category: "",
-    img: "",
     title: "",
     availability: true,
+    img: "", // keep this only for preview/edit existing image path
   });
 
   const fetchProducts = () => {
     axios
-      .get("http://localhost:5000/api/products", { withCredentials: true })
+      .get(`${API_BASE}/api/products`, { withCredentials: true })
       .then((res) => setProducts(res.data))
       .catch((error) => console.error("Error fetching products:", error));
   };
@@ -27,7 +31,7 @@ export default function ProductsPage() {
   const deleteProduct = async (id) => {
     if (!window.confirm("Delete product?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/products/${id}`, {
+      await axios.delete(`${API_BASE}/api/products/${id}`, {
         withCredentials: true,
       });
       fetchProducts();
@@ -39,28 +43,54 @@ export default function ProductsPage() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
-    });
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    setImageFile(file);
   };
 
   const resetForm = () => {
     setFormData({
       id: "",
       category: "",
-      img: "",
       title: "",
       availability: true,
+      img: "",
     });
+    setImageFile(null);
     setEditingProduct(null);
     setShowAddForm(false);
   };
 
+  const buildPayload = () => {
+    const data = new FormData();
+    data.append("id", formData.id);
+    data.append("category", formData.category);
+    data.append("title", formData.title);
+    data.append("availability", String(formData.availability));
+
+    if (imageFile) {
+      data.append("image", imageFile); // must match upload.single("image")
+    }
+
+    return data;
+  };
+
   const addProduct = async (e) => {
     e.preventDefault();
+
+    if (!imageFile) {
+      alert("Please choose an image from your device");
+      return;
+    }
+
     try {
-      await axios.post("http://localhost:5000/api/products", formData, {
+      await axios.post(`${API_BASE}/api/products`, buildPayload(), {
         withCredentials: true,
       });
       resetForm();
@@ -75,8 +105,8 @@ export default function ProductsPage() {
     e.preventDefault();
     try {
       await axios.put(
-        `http://localhost:5000/api/products/${editingProduct._id}`,
-        formData,
+        `${API_BASE}/api/products/${editingProduct._id}`,
+        buildPayload(),
         { withCredentials: true },
       );
       resetForm();
@@ -89,15 +119,22 @@ export default function ProductsPage() {
 
   const startEdit = (product) => {
     setEditingProduct(product);
+    setImageFile(null);
     setFormData({
       id: product.id || "",
       category: product.category || "",
-      img: product.img || "",
       title: product.title || "",
       availability:
         product.availability !== undefined ? product.availability : true,
+      img: product.img || "",
     });
     setShowAddForm(true);
+  };
+
+  const getImageSrc = (img) => {
+    if (!img) return "";
+    if (img.startsWith("http")) return img;
+    return `${API_BASE}${img}`;
   };
 
   return (
@@ -106,8 +143,16 @@ export default function ProductsPage() {
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
           Products Management
         </h2>
+
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => {
+            if (showAddForm) {
+              resetForm();
+            } else {
+              setEditingProduct(null);
+              setShowAddForm(true);
+            }
+          }}
           className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
         >
           {showAddForm
@@ -126,6 +171,7 @@ export default function ProductsPage() {
           <h3 className="text-lg font-semibold mb-4">
             {editingProduct ? "Edit Product" : "Add New Product"}
           </h3>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block mb-2 text-sm font-medium">ID</label>
@@ -138,6 +184,7 @@ export default function ProductsPage() {
                 required
               />
             </div>
+
             <div>
               <label className="block mb-2 text-sm font-medium">Category</label>
               <input
@@ -149,19 +196,7 @@ export default function ProductsPage() {
                 required
               />
             </div>
-            <div>
-              <label className="block mb-2 text-sm font-medium">
-                Image URL
-              </label>
-              <input
-                type="url"
-                name="img"
-                value={formData.img}
-                onChange={handleInputChange}
-                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-600 dark:border-gray-500"
-                required
-              />
-            </div>
+
             <div>
               <label className="block mb-2 text-sm font-medium">Title</label>
               <input
@@ -173,7 +208,37 @@ export default function ProductsPage() {
                 required
               />
             </div>
+
+            <div>
+              <label className="block mb-2 text-sm font-medium">
+                Product Image
+              </label>
+              <input
+                type="file"
+                name="image"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600 dark:bg-gray-600 dark:border-gray-500"
+                required={!editingProduct}
+              />
+            </div>
           </div>
+
+          {(imageFile || formData.img) && (
+            <div className="mb-4">
+              <p className="text-sm font-medium mb-2">Preview</p>
+              <img
+                src={
+                  imageFile
+                    ? URL.createObjectURL(imageFile)
+                    : getImageSrc(formData.img)
+                }
+                alt="Preview"
+                className="w-24 h-24 object-cover rounded border"
+              />
+            </div>
+          )}
+
           <div className="mb-4">
             <label className="flex items-center">
               <input
@@ -186,6 +251,7 @@ export default function ProductsPage() {
               <span className="text-sm font-medium">Available</span>
             </label>
           </div>
+
           <button
             type="submit"
             className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
@@ -219,7 +285,7 @@ export default function ProductsPage() {
                 <td className="p-4">
                   {p.img && (
                     <img
-                      src={p.img}
+                      src={getImageSrc(p.img)}
                       alt={p.title || p.name}
                       className="w-16 h-16 object-cover rounded"
                     />
@@ -256,6 +322,7 @@ export default function ProductsPage() {
             ))}
           </tbody>
         </table>
+
         {products.length === 0 && (
           <div className="p-8 text-center text-gray-500 dark:text-gray-400">
             No products found. Click "Add Product" to create your first product.

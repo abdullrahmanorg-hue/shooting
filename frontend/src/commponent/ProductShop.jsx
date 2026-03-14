@@ -10,20 +10,27 @@ export default function ProductShop() {
 
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // Fetch products from API
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get("http://localhost:5000/api/products");
-        setProductsData(response.data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to load products");
-        setLoading(false);
-      }
-    };
+  const API_BASE = "http://localhost:5000";
 
+  const getImageSrc = (img) => {
+    if (!img) return "";
+    if (img.startsWith("http")) return img;
+    return `${API_BASE}${img}`;
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/products");
+      setProductsData(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching products:", err);
+      setError("Failed to load products");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, []);
 
@@ -109,7 +116,7 @@ export default function ProductShop() {
             >
               <div className="overflow-hidden">
                 <img
-                  src={product.img || product.image}
+                  src={getImageSrc(product.img || product.image)}
                   alt={product.title || product.name}
                   className="h-64 w-full object-cover group-hover:scale-110 transition duration-500"
                   onError={(e) => {

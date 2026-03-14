@@ -6,9 +6,20 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const uploadsDir = path.join(__dirname, "uploads");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is missing in .env");
@@ -290,6 +301,33 @@ app.get("/api/admin", requireAuth, requireAdmin, (req, res) => {
   });
 });
 
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
+    cb(null, safeName);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype && file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed"), false);
+  }
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+});
+
 // Products API – GET public, write operations admin-only
 app.get("/api/products", async (req, res) => {
   try {
@@ -301,48 +339,80 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
-app.post("/api/products", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id, category, img, title, availability } = req.body;
-    if (!id || !category || !img || !title) {
-      return res.status(400).json({ message: "id, category, img and title are required" });
-    }
-    const product = await Product.create({
-      id: String(id).trim(),
-      category: String(category).trim(),
-      img: String(img).trim(),
-      title: String(title).trim(),
-      availability: availability !== false,
-    });
-    return res.status(201).json(product);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
+app.post(
+  "/api/products",
+  requireAuth,
+  requireAdmin,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const { id, category, title, availability } = req.body || {};
 
-app.put("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const update = {};
-    if (req.body.id != null) update.id = String(req.body.id).trim();
-    if (req.body.category != null) update.category = String(req.body.category).trim();
-    if (req.body.img != null) update.img = String(req.body.img).trim();
-    if (req.body.title != null) update.title = String(req.body.title).trim();
-    if (req.body.availability !== undefined) update.availability = !!req.body.availability;
+      if (!id || !category || !title) {
+        return res
+          .status(400)
+          .json({ message: "id, category and title are required" });
+      }
 
-    const product = await Product.findByIdAndUpdate(req.params.id, update, {
-      new: true,
-      runValidators: true,
-    });
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      if (!req.file) {
+        return res.status(400).json({ message: "Image file is required" });
+      }
+
+      const product = await Product.create({
+        id: String(id).trim(),
+        category: String(category).trim(),
+        title: String(title).trim(),
+        img: `/uploads/${req.file.filename}`,
+        availability: availability === "false" ? false : true,
+      });
+
+      return res.status(201).json(product);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
     }
-    return res.json(product);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
   }
-});
+);
+
+app.put(
+  "/api/products/:id",
+  requireAuth,
+  requireAdmin,
+  upload.single("image"),
+  async (req, res) => {
+    try {
+      const body = req.body || {};
+      const update = {};
+
+      if (body.id != null) update.id = String(body.id).trim();
+      if (body.category != null) {
+        update.category = String(body.category).trim();
+      }
+      if (body.title != null) update.title = String(body.title).trim();
+      if (body.availability !== undefined) {
+        update.availability = body.availability === "false" ? false : true;
+      }
+
+      if (req.file) {
+        update.img = `/uploads/${req.file.filename}`;
+      }
+
+      const product = await Product.findByIdAndUpdate(req.params.id, update, {
+        new: true,
+        runValidators: true,
+      });
+
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      return res.json(product);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
+    }
+  }
+);
 
 app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
