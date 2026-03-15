@@ -97,6 +97,7 @@ const resources = {
       contactEmail: "Email",
       contactEmailPlaceholder: "example@mail.com",
       contactSubmit: "Submit",
+      heroSection: "Hero Section",
     },
   },
   ar: {
@@ -188,6 +189,7 @@ const resources = {
       contactEmail: "البريد الإلكتروني",
       contactEmailPlaceholder: "example@mail.com",
       contactSubmit: "إرسال",
+      heroSection: "قسم البطل",
     },
   },
 };

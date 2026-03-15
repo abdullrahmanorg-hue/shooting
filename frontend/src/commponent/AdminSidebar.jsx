@@ -69,7 +69,7 @@ export default function AdminSidebar() {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          {t("hero")}
+          {t("heroSection")}
         </NavLink>
 
         <NavLink

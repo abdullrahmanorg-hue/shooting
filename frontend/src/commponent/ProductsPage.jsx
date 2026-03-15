@@ -5,6 +5,7 @@ const API_BASE = "http://localhost:5000";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
+  const [filterText, setFilterText] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -27,6 +28,16 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  const filteredProducts = products.filter((p) => {
+    const query = filterText.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      (p.title || "").toLowerCase().includes(query) ||
+      (p.category || "").toLowerCase().includes(query) ||
+      (p.id || "").toString().toLowerCase().includes(query)
+    );
+  });
 
   const deleteProduct = async (id) => {
     if (!window.confirm("Delete product?")) return;
@@ -139,28 +150,53 @@ export default function ProductsPage() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-          Products Management
-        </h2>
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+            Products Management
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Manage your product catalog, update inventory and preview changes
+            instantly.
+          </p>
+        </div>
 
-        <button
-          onClick={() => {
-            if (showAddForm) {
-              resetForm();
-            } else {
-              setEditingProduct(null);
-              setShowAddForm(true);
-            }
-          }}
-          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors"
-        >
-          {showAddForm
-            ? "Cancel"
-            : editingProduct
-              ? "Cancel Edit"
-              : "Add Product"}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative">
+            <input
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              placeholder="Search by title, category or ID"
+              className="w-full max-w-xs rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+            />
+            {filterText && (
+              <button
+                onClick={() => setFilterText("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => {
+              if (showAddForm) {
+                resetForm();
+              } else {
+                setEditingProduct(null);
+                setShowAddForm(true);
+              }
+            }}
+            className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
+          >
+            {showAddForm
+              ? "Cancel"
+              : editingProduct
+                ? "Cancel Edit"
+                : "Add Product"}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -274,7 +310,7 @@ export default function ProductsPage() {
             </tr>
           </thead>
           <tbody>
-            {products.map((p) => (
+            {filteredProducts.map((p) => (
               <tr
                 key={p._id || p.id}
                 className="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -323,9 +359,16 @@ export default function ProductsPage() {
           </tbody>
         </table>
 
-        {products.length === 0 && (
+        {filteredProducts.length === 0 && (
           <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            No products found. Click "Add Product" to create your first product.
+            {products.length === 0 ? (
+              <>
+                No products yet. Click "Add Product" to create your first
+                product.
+              </>
+            ) : (
+              <>No products match your search query.</>
+            )}
           </div>
         )}
       </div>

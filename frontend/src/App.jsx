@@ -17,6 +17,7 @@ import AdminLayout from "./pages/AdminLayout";
 import Dashboard from "./commponent/Dashboard";
 import ProductsPage from "./commponent/ProductsPage";
 import CustomersPage from "./commponent/CustomersPage";
+import HeroAdmin from "./commponent/HeroAdmin";
 import RegisterForm from "./commponent/RegisterForm";
 import ProtectedRoute from "./commponent/ProtectedRoute";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -77,6 +78,7 @@ function AppRoutes() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<ProductsPage />} />
+          <Route path="hero" element={<HeroAdmin />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
         </Route>

@@ -14,9 +14,13 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const uploadsDir = path.join(__dirname, "uploads");
+const heroUploadsDir = path.join(__dirname, "uploads", "hero");
 
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(heroUploadsDir)) {
+  fs.mkdirSync(heroUploadsDir, { recursive: true });
 }
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -137,6 +141,38 @@ const notificationSchema = new mongoose.Schema(
 );
 
 const Notification = mongoose.model("Notification", notificationSchema);
+
+const heroConfigSchema = new mongoose.Schema(
+  {
+    title: { type: String, default: "" },
+    slides: [
+      {
+        image: { type: String, default: "" },
+        alt: { type: String, default: "" },
+      },
+    ],
+  },
+  { timestamps: true }
+);
+
+const HeroConfig = mongoose.model("HeroConfig", heroConfigSchema);
+
+const DEFAULT_HERO = {
+  title: "",
+  slides: [
+    { image: "", alt: "Hero 1" },
+    { image: "", alt: "Hero 2" },
+    { image: "", alt: "Hero 3" },
+  ],
+};
+
+async function getHeroConfig() {
+  let doc = await HeroConfig.findOne();
+  if (!doc) {
+    doc = await HeroConfig.create(DEFAULT_HERO);
+  }
+  return doc;
+}
 
 const cookieOptions = {
   httpOnly: true,
@@ -326,6 +362,85 @@ const upload = multer({
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB
   },
+});
+
+const heroStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, heroUploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".jpg";
+    cb(null, `hero-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+const heroUpload = multer({
+  storage: heroStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
+// Hero config API – GET public, PUT admin (with optional image uploads)
+app.get("/api/hero", async (req, res) => {
+  try {
+    const doc = await getHeroConfig();
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const slides = (doc.slides || []).map((s) => ({
+      image: s.image ? (s.image.startsWith("http") ? s.image : `${baseUrl}${s.image}`) : "",
+      alt: s.alt || "",
+    }));
+    return res.json({
+      title: doc.title || "",
+      slides,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
+});
+
+const heroPutMiddleware = [
+  requireAuth,
+  requireAdmin,
+  heroUpload.fields([
+    { name: "image0", maxCount: 1 },
+    { name: "image1", maxCount: 1 },
+    { name: "image2", maxCount: 1 },
+  ]),
+];
+app.put("/api/hero", heroPutMiddleware, async (req, res) => {
+  try {
+    const doc = await getHeroConfig();
+    const body = req.body || {};
+    const title = String(body.title ?? doc.title ?? "").trim();
+    const existingSlides = doc.slides || [];
+
+      const slides = [0, 1, 2].map((i) => {
+        const file = req.files && req.files[`image${i}`] && req.files[`image${i}`][0];
+        const clearImage = body[`clearImage${i}`] === "1" || body[`clearImage${i}`] === "true";
+        const alt = String(body[`alt${i}`] ?? existingSlides[i]?.alt ?? "").trim();
+        let image = (existingSlides[i] && existingSlides[i].image) || "";
+        if (file) image = `/uploads/hero/${file.filename}`;
+        else if (clearImage) image = "";
+        return { image, alt };
+      });
+
+    doc.title = title;
+    doc.slides = slides;
+    await doc.save();
+
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const responseSlides = slides.map((s) => ({
+      image: s.image ? `${baseUrl}${s.image}` : "",
+      alt: s.alt,
+    }));
+
+    return res.json({
+      title: doc.title,
+      slides: responseSlides,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Products API – GET public, write operations admin-only
