@@ -33,14 +33,16 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-  })
+  }),
 );
 
 app.use(express.json());
 app.use(cookieParser());
 
 async function ensureAdminUser() {
-  const email = (process.env.ADMIN_EMAIL || "admin@gmail.com").toLowerCase().trim();
+  const email = (process.env.ADMIN_EMAIL || "admin@gmail.com")
+    .toLowerCase()
+    .trim();
   const password = process.env.ADMIN_PASSWORD || "admin123";
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -98,7 +100,7 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const User = mongoose.model("User", userSchema);
@@ -111,7 +113,7 @@ const productSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     availability: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Product = mongoose.model("Product", productSchema);
@@ -124,7 +126,7 @@ const customerSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Customer = mongoose.model("Customer", customerSchema);
@@ -137,7 +139,7 @@ const notificationSchema = new mongoose.Schema(
     read: { type: Boolean, default: false },
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Notification = mongoose.model("Notification", notificationSchema);
@@ -152,7 +154,7 @@ const heroConfigSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const HeroConfig = mongoose.model("HeroConfig", heroConfigSchema);
@@ -189,7 +191,7 @@ function signToken(user) {
       role: user.role,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "1d" },
   );
 }
 
@@ -268,12 +270,16 @@ app.post("/api/login", async (req, res) => {
 
   try {
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res
+        .status(400)
+        .json({ message: "Email and password are required" });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      "+password",
+    );
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
@@ -384,7 +390,11 @@ app.get("/api/hero", async (req, res) => {
     const doc = await getHeroConfig();
     const baseUrl = `${req.protocol}://${req.get("host")}`;
     const slides = (doc.slides || []).map((s) => ({
-      image: s.image ? (s.image.startsWith("http") ? s.image : `${baseUrl}${s.image}`) : "",
+      image: s.image
+        ? s.image.startsWith("http")
+          ? s.image
+          : `${baseUrl}${s.image}`
+        : "",
       alt: s.alt || "",
     }));
     return res.json({
@@ -397,15 +407,7 @@ app.get("/api/hero", async (req, res) => {
   }
 });
 
-const heroPutMiddleware = [
-  requireAuth,
-  requireAdmin,
-  heroUpload.fields([
-    { name: "image0", maxCount: 1 },
-    { name: "image1", maxCount: 1 },
-    { name: "image2", maxCount: 1 },
-  ]),
-];
+const heroPutMiddleware = [requireAuth, requireAdmin, heroUpload.any()];
 app.put("/api/hero", heroPutMiddleware, async (req, res) => {
   try {
     const doc = await getHeroConfig();
@@ -413,15 +415,36 @@ app.put("/api/hero", heroPutMiddleware, async (req, res) => {
     const title = String(body.title ?? doc.title ?? "").trim();
     const existingSlides = doc.slides || [];
 
-      const slides = [0, 1, 2].map((i) => {
-        const file = req.files && req.files[`image${i}`] && req.files[`image${i}`][0];
-        const clearImage = body[`clearImage${i}`] === "1" || body[`clearImage${i}`] === "true";
-        const alt = String(body[`alt${i}`] ?? existingSlides[i]?.alt ?? "").trim();
-        let image = (existingSlides[i] && existingSlides[i].image) || "";
-        if (file) image = `/uploads/hero/${file.filename}`;
-        else if (clearImage) image = "";
-        return { image, alt };
-      });
+    // Find all slide indices from the form data
+    const slideIndices = new Set();
+    Object.keys(body).forEach((key) => {
+      if (
+        key.startsWith("alt") ||
+        key.startsWith("clearImage") ||
+        key.startsWith("image")
+      ) {
+        const match = key.match(/\d+/);
+        if (match) slideIndices.add(parseInt(match[0]));
+      }
+    });
+
+    // Convert to sorted array
+    const indices = Array.from(slideIndices).sort((a, b) => a - b);
+
+    // Process each slide
+    const slides = indices.map((i) => {
+      const file =
+        req.files && req.files.find((f) => f.fieldname === `image${i}`);
+      const clearImage =
+        body[`clearImage${i}`] === "1" || body[`clearImage${i}`] === "true";
+      const alt = String(
+        body[`alt${i}`] ?? existingSlides[i]?.alt ?? "",
+      ).trim();
+      let image = (existingSlides[i] && existingSlides[i].image) || "";
+      if (file) image = `/uploads/hero/${file.filename}`;
+      else if (clearImage) image = "";
+      return { image, alt };
+    });
 
     doc.title = title;
     doc.slides = slides;
@@ -486,7 +509,7 @@ app.post(
       console.error(err);
       return res.status(500).json({ message: "Server error" });
     }
-  }
+  },
 );
 
 app.put(
@@ -526,7 +549,7 @@ app.put(
       console.error(err);
       return res.status(500).json({ message: "Server error" });
     }
-  }
+  },
 );
 
 app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
@@ -598,7 +621,9 @@ app.get("/api/customers", requireAuth, requireAdmin, async (req, res) => {
 // Admin notifications inbox
 app.get("/api/notifications", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const notifications = await Notification.find().sort({ createdAt: -1 }).limit(200);
+    const notifications = await Notification.find()
+      .sort({ createdAt: -1 })
+      .limit(200);
     return res.json(notifications);
   } catch (err) {
     console.error(err);
@@ -607,36 +632,46 @@ app.get("/api/notifications", requireAuth, requireAdmin, async (req, res) => {
 });
 
 // Mark notification as read
-app.put("/api/notifications/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const notification = await Notification.findByIdAndUpdate(
-      req.params.id,
-      { read: req.body.read },
-      { new: true }
-    );
-    if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+app.put(
+  "/api/notifications/:id",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const notification = await Notification.findByIdAndUpdate(
+        req.params.id,
+        { read: req.body.read },
+        { new: true },
+      );
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      return res.json(notification);
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
     }
-    return res.json(notification);
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
+  },
+);
 
 // Delete notification
-app.delete("/api/notifications/:id", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const notification = await Notification.findByIdAndDelete(req.params.id);
-    if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+app.delete(
+  "/api/notifications/:id",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const notification = await Notification.findByIdAndDelete(req.params.id);
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      return res.json({ message: "Notification deleted" });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Server error" });
     }
-    return res.json({ message: "Notification deleted" });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "Server error" });
-  }
-});
+  },
+);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
