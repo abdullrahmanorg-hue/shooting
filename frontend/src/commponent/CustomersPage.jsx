@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 
 export default function CustomersPage() {
+  const { t } = useTranslation();
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -22,7 +25,9 @@ export default function CustomersPage() {
       setCustomers(response.data);
       setError("");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load customers");
+      setError(
+        err.response?.data?.message || t("failedToLoadCustomers")
+      );
       console.error("Error fetching customers:", err);
     } finally {
       setLoading(false);
@@ -32,7 +37,9 @@ export default function CustomersPage() {
   if (loading) {
     return (
       <div className="text-center p-6">
-        <p className="text-gray-500 dark:text-gray-400">Loading customers...</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          {t("loadingCustomers")}
+        </p>
       </div>
     );
   }
@@ -40,12 +47,14 @@ export default function CustomersPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold dark:text-white">Customers</h2>
+        <h2 className="text-2xl font-bold dark:text-white">
+          {t("customers")}
+        </h2>
         <button
           onClick={fetchCustomers}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition dark:bg-blue-600 dark:hover:bg-blue-700"
         >
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
@@ -57,7 +66,9 @@ export default function CustomersPage() {
 
       {customers.length === 0 ? (
         <div className="text-center p-8 bg-gray-50 rounded-lg dark:bg-gray-800">
-          <p className="text-gray-500 dark:text-gray-400">No customers yet</p>
+          <p className="text-gray-500 dark:text-gray-400">
+            {t("noCustomers")}
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-xl shadow">
@@ -65,25 +76,26 @@ export default function CustomersPage() {
             <thead className="bg-gray-100 dark:bg-gray-700 border-b dark:border-gray-600">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Name
+                  {t("name")}
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Shop Name
+                  {t("shopName")}
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Email
+                  {t("email")}
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Phone
+                  {t("phone")}
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Address
+                  {t("address")}
                 </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold">
-                  Submitted
+                  {t("submitted")}
                 </th>
               </tr>
             </thead>
+
             <tbody>
               {customers.map((c) => (
                 <tr

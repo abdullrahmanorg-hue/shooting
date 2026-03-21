@@ -2,14 +2,29 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { MdDarkMode } from "react-icons/md";
 
 export default function AdminSidebar() {
   const { t, i18n } = useTranslation();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem('darkMode') === 'true'
+  );
+
+  // Dark Mode
+  useEffect(() => {
+    const html = document.documentElement;
+    if (darkMode) {
+      html.classList.add('dark');
+      localStorage.setItem('darkMode', 'true');
+    } else {
+      html.classList.remove('dark');
+      localStorage.setItem('darkMode', 'false');
+    }
+  }, [darkMode]);
 
   useEffect(() => {
     fetchUnreadCount();
-    // Poll for new unread notifications every 5 seconds
     const interval = setInterval(fetchUnreadCount, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -31,11 +46,13 @@ export default function AdminSidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-white dark:bg-gray-900 shadow-lg p-5">
+      
       <h2 className="text-xl font-bold mb-6 text-gray-800 dark:text-white">
-        Admin
+        {t("admin")}
       </h2>
 
-      <nav className="space-y-3 flex flex-col items-center pt-14">
+      <nav className="space-y-3 flex flex-col items-center pt-11">
+
         <NavLink
           to="/admin/dashboard"
           className={({ isActive }) =>
@@ -52,15 +69,6 @@ export default function AdminSidebar() {
           }
         >
           {t("products")}
-        </NavLink>
-
-        <NavLink
-          to="/admin/categories"
-          className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
-          }
-        >
-          {t("categories")}
         </NavLink>
 
         <NavLink
@@ -88,25 +96,33 @@ export default function AdminSidebar() {
           }
         >
           <div className="relative inline-block">
-            📬 Notifications
+            📬 {t("notifications")}
             {unreadCount > 0 && (
               <span className="absolute -top-2 -right-6 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                {unreadCount > 99 ? "99+" : unreadCount}
+                {unreadCount > 99 ? t("manyNotifications") : unreadCount}
               </span>
             )}
           </div>
         </NavLink>
+
       </nav>
 
-      <div className="mt-10 flex items-center justify-center">
+      <div className="mt-10 flex items-center justify-around">
+
         <button
           onClick={() =>
             i18n.changeLanguage(i18n.language === "ar" ? "en" : "ar")
           }
           className="text-sm bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded cursor-pointer"
         >
-          {i18n.language === "ar" ? "English" : "العربية"}
+          {i18n.language === "ar" ? t("english") : t("arabic")}
         </button>
+
+        <MdDarkMode
+          className="text-xl cursor-pointer hover:text-yellow-400 transition"
+          onClick={() => setDarkMode(!darkMode)}
+        />
+
       </div>
     </aside>
   );

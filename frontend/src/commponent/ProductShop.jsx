@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
+import { Navigate, useNavigate } from "react-router-dom";
 
 export default function ProductShop() {
   const { t } = useTranslation();
@@ -9,6 +10,7 @@ export default function ProductShop() {
   const [error, setError] = useState(null);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const Navigate = useNavigate(); 
 
   const API_BASE = "http://localhost:5000";
 
@@ -136,16 +138,19 @@ export default function ProductShop() {
                 {!product.availability && (
                   <p className="text-red-500 text-sm mb-2">Out of Stock</p>
                 )}
-                <button
+                
+
+                <button 
+                    onClick={()=> Navigate("./contact")}
                   className={`w-full py-2 font-bold rounded-lg hover:scale-105 transition ${
                     product.availability !== false
-                      ? "bg-black text-white dark:bg-white dark:text-black"
-                      : "bg-gray-400 text-gray-600 cursor-not-allowed"
+                    ? "bg-black text-white dark:bg-white dark:text-black"
+                    : "bg-gray-400 text-gray-600 cursor-not-allowed"
                   }`}
                   disabled={product.availability === false}
-                >
+                  >
                   {product.availability !== false
-                    ? t("addToCart")
+                    ? t("Contact Me")
                     : "Out of Stock"}
                 </button>
               </div>

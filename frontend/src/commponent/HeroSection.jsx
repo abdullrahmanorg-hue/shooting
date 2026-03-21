@@ -77,37 +77,46 @@ export default function HeroSection() {
   }
 
   return (
-    <div className="">
-      <div className="h-dvh bg-gray-300 dark:bg-black">
-        <Swiper
-          modules={[Autoplay, Pagination]}
-          autoplay={{ delay: 5000 }}
-          pagination={{ clickable: true }}
-          loop={true}
-          className="w-full h-full"
-        >
-          {slides.map((slide, index) => (
-            <SwiperSlide key={index} className="flex justify-between">
-              <img
-                src={slide.image}
-                alt={slide.alt || "Hero slide"}
-                className="w-full h-full object-cover"
-              />
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      </div>
+<div className="">
+  <div className="h-dvh bg-gray-300 dark:bg-black">
+    <Swiper
+      modules={[Autoplay, Pagination]}
+      autoplay={{ delay: 5000 }}
+      pagination={{ clickable: true }}
+      loop={true}
+      className="w-full h-full"
+    >
+      {slides.map((slide, index) => (
+        <SwiperSlide key={index} className="relative w-full h-full">
+          {/* الصورة */}
+          <img
+            src={slide.image}
+            alt={slide.alt || "Hero slide"}
+            className="w-full h-full object-cover"
+          />
 
-      <marquee
-        behavior=""
-        direction=""
-        className="bg-black text-white p-3 font-semibold dark:text-[#fff2e1]"
-      >
-        <span>{config.marquee}</span>
-        <span>{config.marquee}</span>
-        <span>{config.marquee}</span>
-        <span>{config.marquee}</span>
-      </marquee>
-    </div>
+          {/* Overlay أسود شفاف */}
+          <div className="absolute top-0 left-0 w-full h-full bg-black/20"></div>
+
+          {/* العنوان في المنتصف */}
+          <h2 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-3xl font-bold text-center">
+            {slide.title || slide.alt}
+          </h2>
+        </SwiperSlide>
+      ))}
+    </Swiper>
+  </div>
+
+  <marquee
+    behavior=""
+    direction=""
+    className="bg-black text-white p-3 font-semibold dark:text-[#fff2e1]"
+  >
+    <span>{config.marquee}</span>
+    <span>{config.marquee}</span>
+    <span>{config.marquee}</span>
+    <span>{config.marquee}</span>
+  </marquee>
+</div>
   );
 }
