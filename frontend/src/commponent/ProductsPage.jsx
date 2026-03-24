@@ -149,8 +149,8 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+    <div className="p-6 ">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 ">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
             Products Management
@@ -297,7 +297,7 @@ export default function ProductsPage() {
         </form>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden ">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
