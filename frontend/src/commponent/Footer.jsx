@@ -52,7 +52,7 @@ export default function Footer() {
 
     try {
       setStatus(t("submitting") || "Submitting...");
-      const baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+      const baseUrl = import.meta.env.VITE_API_URL || "https://shootingstar-two.vercel.app";
 
       await axios.post(`${baseUrl}/api/customers`, {
         // required fields for your /api/customers endpoint

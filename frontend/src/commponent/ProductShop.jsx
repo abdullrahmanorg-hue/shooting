@@ -22,7 +22,7 @@ export default function ProductShop() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/products");
+      const response = await axios.get("https://shootingstar-two.vercel.app/api/products");
       setProductsData(response.data);
       setLoading(false);
     } catch (err) {

@@ -92,7 +92,7 @@ export default function NotificationsCenter() {
   const markAsRead = async (notificationId) => {
     try {
       await axios.put(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications/${notificationId}`,
+        `${import.meta.env.VITE_API_URL || "https://shootingstar-two.vercel.app"}/api/notifications/${notificationId}`,
         { read: true },
         {
           withCredentials: true,
@@ -111,7 +111,7 @@ export default function NotificationsCenter() {
   const deleteNotification = async (notificationId) => {
     try {
       await axios.delete(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications/${notificationId}`,
+        `${import.meta.env.VITE_API_URL || "https://shootingstar-two.vercel.app"}/api/notifications/${notificationId}`,
         {
           withCredentials: true,
         },
