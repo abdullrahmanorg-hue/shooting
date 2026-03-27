@@ -12,7 +12,7 @@ import ContactPage from "./pages/ContactPage";
 import Shop from "./pages/Shop";
 import Nav from "./commponent/Nav";
 import LoginPage from "./pages/LoginPage";
-import Home from "./pages/home";
+import Home from "./pages/Home";
 import AdminLayout from "./pages/AdminLayout";
 import Dashboard from "./commponent/Dashboard";
 import ProductsPage from "./commponent/ProductsPage";
