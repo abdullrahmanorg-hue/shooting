@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://shootingstar-two.vercel.app";
 const HERO_CONFIG_UPDATED_EVENT = "heroConfigUpdated";
 
 const DEFAULT_CONFIG = (t) => ({

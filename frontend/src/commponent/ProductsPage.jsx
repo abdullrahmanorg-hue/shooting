@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://shootingstar-two.vercel.app";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);

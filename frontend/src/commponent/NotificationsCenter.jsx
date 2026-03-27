@@ -61,7 +61,7 @@ export default function NotificationsCenter() {
   const fetchNotifications = async () => {
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/notifications`,
+        `${import.meta.env.VITE_API_URL || "https://shootingstar-two.vercel.app"}/api/notifications`,
         {
           withCredentials: true,
         },

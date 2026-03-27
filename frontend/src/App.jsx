@@ -29,7 +29,7 @@ function AppRoutes() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/me", {
+        const res = await fetch("https://shootingstar-two.vercel.app/api/me", {
           credentials: "include",
         });
 

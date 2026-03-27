@@ -12,7 +12,7 @@ export default function ProductShop() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const Navigate = useNavigate(); 
 
-  const API_BASE = "http://localhost:5000";
+  const API_BASE = "https://shootingstar-two.vercel.app";
 
   const getImageSrc = (img) => {
     if (!img) return "";
