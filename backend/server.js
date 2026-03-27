@@ -29,9 +29,21 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is missing in .env");
 }
 
+// ── CORS ── يقبل الفرونت سواء على localhost أو على Vercel
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:3000",
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      // السماح لـ requests من غير origin (مثل Postman أو curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
@@ -39,17 +51,25 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// ── Cookie options ── sameSite مهم جداً في production
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  maxAge: 24 * 60 * 60 * 1000, // 1 day
+};
+
 async function ensureAdminUser() {
-  const email = (process.env.ADMIN_EMAIL || "admin@gmail.com")
+  const email = (process.env.ADMIN_EMAIL || "shehap@gmail.com")
     .toLowerCase()
     .trim();
-  const password = process.env.ADMIN_PASSWORD || "admin123";
+  const password = process.env.ADMIN_PASSWORD || "shehap011*123";
   const hashedPassword = await bcrypt.hash(password, 10);
 
   const existing = await User.findOne({ email }).select("+password");
   if (existing) {
     existing.role = "admin";
-    existing.password = hashedPassword; // keep admin password in sync with .env
+    existing.password = hashedPassword;
     existing.name = "Admin";
     await existing.save();
     console.log("Admin user updated:", email);
@@ -76,11 +96,7 @@ mongoose
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+    name: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
@@ -88,11 +104,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    password: {
-      type: String,
-      required: true,
-      select: false,
-    },
+    password: { type: String, required: true, select: false },
     role: {
       type: String,
       required: true,
@@ -176,20 +188,9 @@ async function getHeroConfig() {
   return doc;
 }
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  maxAge: 24 * 60 * 60 * 1000, // 1 day
-};
-
 function signToken(user) {
   return jwt.sign(
-    {
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    },
+    { userId: user._id.toString(), email: user.email, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "1d" },
   );
@@ -197,11 +198,7 @@ function signToken(user) {
 
 function requireAuth(req, res, next) {
   const token = req.cookies.token;
-
-  if (!token) {
-    return res.status(401).json({ message: "Not authenticated" });
-  }
-
+  if (!token) return res.status(401).json({ message: "Not authenticated" });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
@@ -218,46 +215,51 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// Public register route
-// public registration endpoint
+// ── Multer ──
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
+});
+const upload = multer({ storage });
+
+const heroStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, heroUploadsDir),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
+});
+const heroUpload = multer({ storage: heroStorage });
+
+// ══════════════════════════════════════════════
+// Auth Routes
+// ══════════════════════════════════════════════
+
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // basic validation
-    if (!name || !name.trim()) {
+    if (!name || !name.trim())
       return res.status(400).json({ message: "Name is required" });
-    }
-    if (!email || !email.includes("@")) {
+    if (!email || !email.includes("@"))
       return res.status(400).json({ message: "Valid email is required" });
-    }
-    if (!password || password.length < 6) {
+    if (!password || password.length < 6)
       return res
         .status(400)
         .json({ message: "Password must be at least 6 characters" });
-    }
 
     const normalizedEmail = email.toLowerCase().trim();
-
-    // prevent duplicates
     const existing = await User.findOne({ email: normalizedEmail });
-    if (existing) {
+    if (existing)
       return res.status(409).json({ message: "Email already registered" });
-    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
       role: "user",
     });
-
-    // optionally sign a token/cookie right away
     const token = signToken(user);
     res.cookie("token", token, cookieOptions);
-
     return res.status(201).json({ message: "Registration successful" });
   } catch (err) {
     console.error(err);
@@ -267,40 +269,26 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
-
   try {
-    if (!email || !password) {
+    if (!email || !password)
       return res
         .status(400)
         .json({ message: "Email and password are required" });
-    }
-
     const normalizedEmail = email.toLowerCase().trim();
-
     const user = await User.findOne({ email: normalizedEmail }).select(
       "+password",
     );
-
-    if (!user) {
+    if (!user)
       return res.status(401).json({ message: "Invalid email or password" });
-    }
-
     const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
+    if (!isMatch)
       return res.status(401).json({ message: "Invalid email or password" });
-    }
-
     const token = signToken(user);
-
     res.cookie("token", token, cookieOptions);
-
     return res.json({
       message: "Login successful",
-      user: {
-        email: user.email,
-        role: user.role,
-      },
+      role: user.role,
+      name: user.name,
     });
   } catch (err) {
     console.error(err);
@@ -309,82 +297,33 @@ app.post("/api/login", async (req, res) => {
 });
 
 app.post("/api/logout", (req, res) => {
-  res.clearCookie("token", cookieOptions);
-  return res.json({ message: "Logged out successfully" });
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  });
+  return res.json({ message: "Logged out" });
 });
 
 app.get("/api/me", requireAuth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("email role");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    return res.json({ user });
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
   } catch (err) {
-    console.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-// Example protected route
-app.get("/api/protected", requireAuth, (req, res) => {
-  return res.json({
-    message: "You are authenticated",
-    user: req.user,
-  });
-});
+// ══════════════════════════════════════════════
+// Hero Routes
+// ══════════════════════════════════════════════
 
-// Example admin-only route
-app.get("/api/admin", requireAuth, requireAdmin, (req, res) => {
-  return res.json({
-    message: "Welcome admin",
-  });
-});
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const safeName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
-    cb(null, safeName);
-  },
-});
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype && file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed"), false);
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
-});
-
-const heroStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, heroUploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || ".jpg";
-    cb(null, `hero-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
-  },
-});
-
-const heroUpload = multer({
-  storage: heroStorage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
-
-// Hero config API – GET public, PUT admin (with optional image uploads)
 app.get("/api/hero", async (req, res) => {
   try {
     const doc = await getHeroConfig();
@@ -397,10 +336,7 @@ app.get("/api/hero", async (req, res) => {
         : "",
       alt: s.alt || "",
     }));
-    return res.json({
-      title: doc.title || "",
-      slides,
-    });
+    return res.json({ title: doc.title || "", slides });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
@@ -415,7 +351,6 @@ app.put("/api/hero", heroPutMiddleware, async (req, res) => {
     const title = String(body.title ?? doc.title ?? "").trim();
     const existingSlides = doc.slides || [];
 
-    // Find all slide indices from the form data
     const slideIndices = new Set();
     Object.keys(body).forEach((key) => {
       if (
@@ -428,10 +363,7 @@ app.put("/api/hero", heroPutMiddleware, async (req, res) => {
       }
     });
 
-    // Convert to sorted array
     const indices = Array.from(slideIndices).sort((a, b) => a - b);
-
-    // Process each slide
     const slides = indices.map((i) => {
       const file =
         req.files && req.files.find((f) => f.fieldname === `image${i}`);
@@ -456,17 +388,17 @@ app.put("/api/hero", heroPutMiddleware, async (req, res) => {
       alt: s.alt,
     }));
 
-    return res.json({
-      title: doc.title,
-      slides: responseSlides,
-    });
+    return res.json({ title: doc.title, slides: responseSlides });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
   }
 });
 
-// Products API – GET public, write operations admin-only
+// ══════════════════════════════════════════════
+// Products Routes
+// ══════════════════════════════════════════════
+
 app.get("/api/products", async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 });
@@ -485,17 +417,12 @@ app.post(
   async (req, res) => {
     try {
       const { id, category, title, availability } = req.body || {};
-
-      if (!id || !category || !title) {
+      if (!id || !category || !title)
         return res
           .status(400)
           .json({ message: "id, category and title are required" });
-      }
-
-      if (!req.file) {
+      if (!req.file)
         return res.status(400).json({ message: "Image file is required" });
-      }
-
       const product = await Product.create({
         id: String(id).trim(),
         category: String(category).trim(),
@@ -503,7 +430,6 @@ app.post(
         img: `/uploads/${req.file.filename}`,
         availability: availability === "false" ? false : true,
       });
-
       return res.status(201).json(product);
     } catch (err) {
       console.error(err);
@@ -521,29 +447,18 @@ app.put(
     try {
       const body = req.body || {};
       const update = {};
-
       if (body.id != null) update.id = String(body.id).trim();
-      if (body.category != null) {
-        update.category = String(body.category).trim();
-      }
+      if (body.category != null) update.category = String(body.category).trim();
       if (body.title != null) update.title = String(body.title).trim();
-      if (body.availability !== undefined) {
+      if (body.availability !== undefined)
         update.availability = body.availability === "false" ? false : true;
-      }
-
-      if (req.file) {
-        update.img = `/uploads/${req.file.filename}`;
-      }
-
+      if (req.file) update.img = `/uploads/${req.file.filename}`;
       const product = await Product.findByIdAndUpdate(req.params.id, update, {
         new: true,
         runValidators: true,
       });
-
-      if (!product) {
+      if (!product)
         return res.status(404).json({ message: "Product not found" });
-      }
-
       return res.json(product);
     } catch (err) {
       console.error(err);
@@ -555,9 +470,7 @@ app.put(
 app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
+    if (!product) return res.status(404).json({ message: "Product not found" });
     return res.json({ message: "Product deleted" });
   } catch (err) {
     console.error(err);
@@ -565,26 +478,23 @@ app.delete("/api/products/:id", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Customers / Contact leads
+// ══════════════════════════════════════════════
+// Customers Routes
+// ══════════════════════════════════════════════
+
 app.post("/api/customers", async (req, res) => {
   try {
     const { name, shopName, address, phone, email } = req.body || {};
-
-    if (!name || !String(name).trim()) {
+    if (!name || !String(name).trim())
       return res.status(400).json({ message: "Name is required" });
-    }
-    if (!shopName || !String(shopName).trim()) {
+    if (!shopName || !String(shopName).trim())
       return res.status(400).json({ message: "Shop name is required" });
-    }
-    if (!address || !String(address).trim()) {
+    if (!address || !String(address).trim())
       return res.status(400).json({ message: "Address is required" });
-    }
-    if (!phone || !String(phone).trim()) {
+    if (!phone || !String(phone).trim())
       return res.status(400).json({ message: "Phone is required" });
-    }
-    if (!email || !String(email).includes("@")) {
+    if (!email || !String(email).includes("@"))
       return res.status(400).json({ message: "Valid email is required" });
-    }
 
     const customer = await Customer.create({
       name: String(name).trim(),
@@ -618,7 +528,10 @@ app.get("/api/customers", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Admin notifications inbox
+// ══════════════════════════════════════════════
+// Notifications Routes
+// ══════════════════════════════════════════════
+
 app.get("/api/notifications", requireAuth, requireAdmin, async (req, res) => {
   try {
     const notifications = await Notification.find()
@@ -631,7 +544,6 @@ app.get("/api/notifications", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Mark notification as read
 app.put(
   "/api/notifications/:id",
   requireAuth,
@@ -643,9 +555,8 @@ app.put(
         { read: req.body.read },
         { new: true },
       );
-      if (!notification) {
+      if (!notification)
         return res.status(404).json({ message: "Notification not found" });
-      }
       return res.json(notification);
     } catch (err) {
       console.error(err);
@@ -654,7 +565,6 @@ app.put(
   },
 );
 
-// Delete notification
 app.delete(
   "/api/notifications/:id",
   requireAuth,
@@ -662,17 +572,42 @@ app.delete(
   async (req, res) => {
     try {
       const notification = await Notification.findByIdAndDelete(req.params.id);
-      if (!notification) {
+      if (!notification)
         return res.status(404).json({ message: "Notification not found" });
-      }
       return res.json({ message: "Notification deleted" });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ message: "Server error" });
     }
   },
-);
+); // ══════════════════════════════════════════════
+// Admin Stats Route (الإحصائيات الحقيقية)
+// ══════════════════════════════════════════════
+
+app.get("/api/admin/stats", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    // 1. حساب عدد المنتجات الحقيقي
+    const productsCount = await Product.countDocuments();
+
+    // 2. حساب عدد العملاء الحقيقي
+    const customersCount = await Customer.countDocuments();
+
+    // 3. حساب عدد الأقسام الفريدة الحقيقي من جدول المنتجات
+    const uniqueCategories = await Product.distinct("category");
+    const categoriesCount = uniqueCategories.length;
+
+    // إرسال البيانات الحقيقية للفرونت إند
+    return res.json({
+      products: productsCount,
+      customers: customersCount,
+      categories: categoriesCount,
+    });
+  } catch (err) {
+    console.error("Error fetching admin stats:", err);
+    return res.status(500).json({ message: "Server error fetching stats" });
+  }
+});
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
