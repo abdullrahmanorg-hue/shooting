@@ -142,7 +142,7 @@ export default function Footer() {
             />
             <button
               onClick={handleSubscribe}
-              className="px-4 py-2 bg-gray-500 text-white rounded-r-md hover:bg-green-400 transition dark:bg-black"
+              className="px-4 py-2 bg-gray-500 text-white rounded-r-md hover:bg-red-600 transition dark:bg-black cursor-pointer"
             >
               {t("subscribe")}
             </button>

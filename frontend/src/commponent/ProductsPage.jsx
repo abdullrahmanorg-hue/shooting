@@ -15,7 +15,7 @@ export default function ProductsPage() {
     category: "",
     title: "",
     availability: true,
-    img: "", // keep this only for preview/edit existing image path
+    img: "",
   });
 
   const fetchProducts = () => {
@@ -66,13 +66,7 @@ export default function ProductsPage() {
   };
 
   const resetForm = () => {
-    setFormData({
-      id: "",
-      category: "",
-      title: "",
-      availability: true,
-      img: "",
-    });
+    setFormData({ id: "", category: "", title: "", availability: true, img: "" });
     setImageFile(null);
     setEditingProduct(null);
     setShowAddForm(false);
@@ -84,22 +78,16 @@ export default function ProductsPage() {
     data.append("category", formData.category);
     data.append("title", formData.title);
     data.append("availability", String(formData.availability));
-
-    if (imageFile) {
-      data.append("image", imageFile); // must match upload.single("image")
-    }
-
+    if (imageFile) data.append("image", imageFile);
     return data;
   };
 
   const addProduct = async (e) => {
     e.preventDefault();
-
     if (!imageFile) {
       alert("Please choose an image from your device");
       return;
     }
-
     try {
       await axios.post(`${API_BASE}/api/products`, buildPayload(), {
         withCredentials: true,
@@ -118,7 +106,7 @@ export default function ProductsPage() {
       await axios.put(
         `${API_BASE}/api/products/${editingProduct._id}`,
         buildPayload(),
-        { withCredentials: true },
+        { withCredentials: true }
       );
       resetForm();
       fetchProducts();
@@ -135,8 +123,7 @@ export default function ProductsPage() {
       id: product.id || "",
       category: product.category || "",
       title: product.title || "",
-      availability:
-        product.availability !== undefined ? product.availability : true,
+      availability: product.availability !== undefined ? product.availability : true,
       img: product.img || "",
     });
     setShowAddForm(true);
@@ -149,25 +136,27 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="p-6 ">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 ">
+    <div className="p-4 sm:p-6">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
             Products Management
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Manage your product catalog, update inventory and preview changes
-            instantly.
+          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+            Manage your product catalog, update inventory and preview changes instantly.
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative">
+        {/* Search + Add button */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xs">
             <input
               value={filterText}
               onChange={(e) => setFilterText(e.target.value)}
               placeholder="Search by title, category or ID"
-              className="w-full max-w-xs rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
             />
             {filterText && (
               <button
@@ -181,34 +170,27 @@ export default function ProductsPage() {
 
           <button
             onClick={() => {
-              if (showAddForm) {
-                resetForm();
-              } else {
-                setEditingProduct(null);
-                setShowAddForm(true);
-              }
+              if (showAddForm) resetForm();
+              else { setEditingProduct(null); setShowAddForm(true); }
             }}
-            className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700"
           >
-            {showAddForm
-              ? "Cancel"
-              : editingProduct
-                ? "Cancel Edit"
-                : "Add Product"}
+            {showAddForm ? "Cancel" : editingProduct ? "Cancel Edit" : "Add Product"}
           </button>
         </div>
       </div>
 
+      {/* ── Form ── */}
       {showAddForm && (
         <form
           onSubmit={editingProduct ? updateProduct : addProduct}
-          className="bg-gray-100 dark:bg-gray-700 p-6 rounded-lg mb-6"
+          className="bg-gray-100 dark:bg-gray-700 p-4 sm:p-6 rounded-lg mb-6"
         >
           <h3 className="text-lg font-semibold mb-4">
             {editingProduct ? "Edit Product" : "Add New Product"}
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block mb-2 text-sm font-medium">ID</label>
               <input
@@ -246,9 +228,7 @@ export default function ProductsPage() {
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium">
-                Product Image
-              </label>
+              <label className="block mb-2 text-sm font-medium">Product Image</label>
               <input
                 type="file"
                 name="image"
@@ -264,11 +244,7 @@ export default function ProductsPage() {
             <div className="mb-4">
               <p className="text-sm font-medium mb-2">Preview</p>
               <img
-                src={
-                  imageFile
-                    ? URL.createObjectURL(imageFile)
-                    : getImageSrc(formData.img)
-                }
+                src={imageFile ? URL.createObjectURL(imageFile) : getImageSrc(formData.img)}
                 alt="Preview"
                 className="w-24 h-24 object-cover rounded border"
               />
@@ -276,13 +252,13 @@ export default function ProductsPage() {
           )}
 
           <div className="mb-4">
-            <label className="flex items-center">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 name="availability"
                 checked={formData.availability}
                 onChange={handleInputChange}
-                className="mr-2"
+                className="w-4 h-4"
               />
               <span className="text-sm font-medium">Available</span>
             </label>
@@ -290,46 +266,122 @@ export default function ProductsPage() {
 
           <button
             type="submit"
-            className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            className="w-full sm:w-auto bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors"
           >
             {editingProduct ? "Update Product" : "Add Product"}
           </button>
         </form>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden ">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="p-4 text-left font-semibold">ID</th>
-              <th className="p-4 text-left font-semibold">Title</th>
-              <th className="p-4 text-left font-semibold">Category</th>
-              <th className="p-4 text-left font-semibold">Image</th>
-              <th className="p-4 text-left font-semibold">Availability</th>
-              <th className="p-4 text-left font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredProducts.map((p) => (
-              <tr
-                key={p._id || p.id}
-                className="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <td className="p-4">{p.id || p._id}</td>
-                <td className="p-4 font-medium">{p.title || p.name}</td>
-                <td className="p-4">{p.category}</td>
-                <td className="p-4">
-                  {p.img && (
-                    <img
-                      src={getImageSrc(p.img)}
-                      alt={p.title || p.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  )}
-                </td>
-                <td className="p-4">
+      {/* ── Table (desktop) / Cards (mobile) ── */}
+
+      {/* Desktop table — hidden on small screens */}
+      <div className="hidden md:block bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-150">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="p-4 text-left font-semibold">ID</th>
+                <th className="p-4 text-left font-semibold">Title</th>
+                <th className="p-4 text-left font-semibold">Category</th>
+                <th className="p-4 text-left font-semibold">Image</th>
+                <th className="p-4 text-left font-semibold">Availability</th>
+                <th className="p-4 text-left font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProducts.map((p) => (
+                <tr
+                  key={p._id || p.id}
+                  className="border-t border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  <td className="p-4 text-sm">{p.id || p._id}</td>
+                  <td className="p-4 font-medium">{p.title || p.name}</td>
+                  <td className="p-4 text-sm">{p.category}</td>
+                  <td className="p-4">
+                    {p.img && (
+                      <img
+                        src={getImageSrc(p.img)}
+                        alt={p.title || p.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        p.availability
+                          ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
+                          : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
+                      }`}
+                    >
+                      {p.availability ? "Available" : "Unavailable"}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => startEdit(p)}
+                        className="text-blue-500 hover:text-blue-700 font-medium text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteProduct(p._id || p.id)}
+                        className="text-red-500 hover:text-red-700 font-medium text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {filteredProducts.length === 0 && <EmptyState products={products} />}
+      </div>
+
+      {/* Mobile cards — visible only on small screens */}
+      <div className="md:hidden flex flex-col gap-4">
+        {filteredProducts.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center text-gray-500 dark:text-gray-400">
+            {products.length === 0
+              ? <>No products yet. Click "Add Product" to create your first product.</>
+              : <>No products match your search query.</>}
+          </div>
+        ) : (
+          filteredProducts.map((p) => (
+            <div
+              key={p._id || p.id}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 flex gap-4 items-start"
+            >
+              {/* Image */}
+              {p.img ? (
+                <img
+                  src={getImageSrc(p.img)}
+                  alt={p.title || p.name}
+                  className="w-20 h-20 object-cover rounded-lg shrink-0"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-lg bg-gray-100 dark:bg-gray-700 shrink-0" />
+              )}
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 dark:text-white truncate">
+                  {p.title || p.name}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  ID: {p.id || p._id}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {p.category}
+                </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                       p.availability
                         ? "bg-green-100 text-green-800 dark:bg-green-800 dark:text-green-100"
                         : "bg-red-100 text-red-800 dark:bg-red-800 dark:text-red-100"
@@ -337,41 +389,37 @@ export default function ProductsPage() {
                   >
                     {p.availability ? "Available" : "Unavailable"}
                   </span>
-                </td>
-                <td className="p-4">
-                  <div className="flex space-x-2">
+
+                  <div className="flex gap-3">
                     <button
                       onClick={() => startEdit(p)}
-                      className="text-blue-500 hover:text-blue-700 font-medium"
+                      className="text-blue-500 hover:text-blue-700 font-medium text-sm"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => deleteProduct(p._id || p.id)}
-                      className="text-red-500 hover:text-red-700 font-medium"
+                      className="text-red-500 hover:text-red-700 font-medium text-sm"
                     >
                       Delete
                     </button>
                   </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {filteredProducts.length === 0 && (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            {products.length === 0 ? (
-              <>
-                No products yet. Click "Add Product" to create your first
-                product.
-              </>
-            ) : (
-              <>No products match your search query.</>
-            )}
-          </div>
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
+    </div>
+  );
+}
+
+function EmptyState({ products }) {
+  return (
+    <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+      {products.length === 0
+        ? <>No products yet. Click "Add Product" to create your first product.</>
+        : <>No products match your search query.</>}
     </div>
   );
 }

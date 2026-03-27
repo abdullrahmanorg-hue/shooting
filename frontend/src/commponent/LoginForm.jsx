@@ -5,11 +5,7 @@ import Swal from "sweetalert2";
 export default function LoginForm({ setUser }) {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,53 +14,47 @@ export default function LoginForm({ setUser }) {
   };
 
   const validate = () => {
-    if (!form.email.includes("@")) {
-      return "Please enter a valid email";
-    }
-    if (form.password.length < 6) {
-      return "Password must be at least 6 characters";
-    }
+    if (!form.email.includes("@")) return "Please enter a valid email";
+    if (form.password.length < 6) return "Password must be at least 6 characters";
     return "";
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+    if (validationError) { setError(validationError); return; }
 
     setError("");
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(form),
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Login failed");
 
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
-      setUser(data.user);
+      // ✅ الباك بيرجع { message, role, name } مش { user: {...} }
+      const user = { role: data.role, name: data.name };
+      setUser(user);
       setLoading(false);
 
       Swal.fire({
         position: "top",
         icon: "success",
-        title: `Login Successful (${data.user.role})`,
+        title: `Login Successful (${data.role})`,
         showConfirmButton: false,
         timer: 1500,
       });
 
-      if (data.user.role === "admin") {
+      if (data.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/");
@@ -81,16 +71,12 @@ export default function LoginForm({ setUser }) {
         <h2 className="text-2xl font-semibold mb-6 text-center">Login</h2>
 
         {error && (
-          <div className="bg-red-100 text-red-600 p-3 mb-4 rounded">
-            {error}
-          </div>
+          <div className="bg-red-100 text-red-600 p-3 mb-4 rounded">{error}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block mb-2 text-sm font-medium hover:scale-105">
-              Email
-            </label>
+            <label className="block mb-2 text-sm font-medium hover:scale-105">Email</label>
             <input
               type="email"
               name="email"
@@ -102,13 +88,11 @@ export default function LoginForm({ setUser }) {
           </div>
 
           <div>
-            <label className="block mb-2 text-sm font-medium hover:scale-105">
-              Password
-            </label>
+            <label className="block mb-2 text-sm font-medium hover:scale-105">Password</label>
             <input
               type="password"
               name="password"
-              value={form.password}
+              value={form.value}
               onChange={handleChange}
               className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
               placeholder="******"
